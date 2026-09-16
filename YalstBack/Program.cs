@@ -15,6 +15,24 @@ public class Program
         builder.Services.AddAuthorization();
         builder.Services.AddControllers();
 
+        var debugOrigin = "_localhostOrigin";
+        var kitten = "_kittenOrigin";
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy(name: kitten,
+                policy =>
+                {
+                    policy.WithOrigins("https://yalst.kitten.rs");
+                });
+            #if DEBUG
+            options.AddPolicy(name: debugOrigin,
+                policy =>
+                {
+                    policy.WithOrigins("http://localhost:4200");
+                });
+            #endif
+        });
+        
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
         
@@ -35,6 +53,12 @@ public class Program
 
         var app = builder.Build();
 
+        app.UseCors(kitten);
+        
+        #if DEBUG
+        app.UseCors(debugOrigin);
+        #endif
+        
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
