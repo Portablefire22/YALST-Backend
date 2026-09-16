@@ -1,0 +1,7 @@
+﻿services:
+  yalstback:
+    image: yalstback
+    build:
+      context: .
+      dockerfile: YalstBack/Dockerfile
+

@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using YalstBack.Data;
 using YalstBack.Data.Dtos;
 using YalstBack.Data.LeagueModels;
-using YetAnotherLeagueStatTracker.Services.Events;
-using YetAnotherLeagueStatTracker.Services.Riot.Actions;
-using YetAnotherLeagueStatTracker.Services.Routing;
+using YalstBack.Services.Actions;
+using YalstBack.Services.Events;
+using YalstBack.Services.Routing;
 using MatchDto = YalstBack.Data.Dtos.MatchHistory.MatchDto;
 namespace YalstBack.Services;
 

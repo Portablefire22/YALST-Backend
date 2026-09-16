@@ -1,4 +1,4 @@
-namespace YetAnotherLeagueStatTracker.Services.Riot.Actions;
+namespace YalstBack.Services.Actions;
 
 public interface IQueuedAction
 {

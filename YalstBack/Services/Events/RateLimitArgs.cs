@@ -1,4 +1,4 @@
-﻿namespace YetAnotherLeagueStatTracker.Services.Events;
+﻿namespace YalstBack.Services.Events;
 
 public class RateLimitArgs
 {

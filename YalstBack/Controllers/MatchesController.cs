@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using YalstBack.Data.Dtos;
 using YalstBack.Services;
 
-namespace YetAnotherLeagueStatTracker.Controllers;
+namespace YalstBack.Controllers;
 
 [Route("[controller]")]
 [ApiController]

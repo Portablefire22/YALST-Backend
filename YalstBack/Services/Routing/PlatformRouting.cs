@@ -1,4 +1,4 @@
-﻿namespace YetAnotherLeagueStatTracker.Services.Routing;
+﻿namespace YalstBack.Services.Routing;
 
 public class PlatformRouting
 {

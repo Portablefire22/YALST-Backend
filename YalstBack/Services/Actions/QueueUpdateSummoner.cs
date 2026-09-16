@@ -1,7 +1,7 @@
 
 using YalstBack.Data.LeagueModels;
 
-namespace YetAnotherLeagueStatTracker.Services.Riot.Actions;
+namespace YalstBack.Services.Actions;
 
 public class QueueUpdateSummoner : QueueSummoner
 {
