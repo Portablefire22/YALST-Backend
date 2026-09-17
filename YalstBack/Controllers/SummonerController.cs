@@ -1,10 +1,18 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using YalstBack.Data.Dtos;
 using YalstBack.Data.LeagueModels;
 using YalstBack.Services;
+using YalstBack.Services.Actions;
 
 namespace YalstBack.Controllers;
 
+
+#if DEBUG
+[EnableCors("_localhostOrigin")]
+#else
+[EnableCors("_kittenOrigin")]
+#endif
 [ApiController]
 [Route("[controller]")]
 public class SummonerController : Controller
@@ -31,5 +39,19 @@ public class SummonerController : Controller
         summoner = await _riotClient.SummonerModelByRiotId(gameName, tagLine, region);
         if (summoner == null) return NotFound();
         return Ok(summoner.ToDto());
+    }
+
+
+    [HttpPatch("{puuid}")]
+    public IActionResult UpdateSummoner(string puuid)
+    {
+        _riotClient.QueueAction(new QueueUpdateSummoner(puuid, null));
+        return Ok();
+    }
+
+    [HttpGet("{puuid}/is-updating")]
+    public ActionResult<bool> GetSummonerStatus(string puuid)
+    {
+        return _riotClient.InQueue(puuid);
     }
 }

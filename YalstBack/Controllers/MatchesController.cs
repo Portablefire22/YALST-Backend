@@ -16,15 +16,15 @@ public class MatchesController : Controller
     }
     
 
-    [HttpGet("GetMatches")]
-    public async Task<ActionResult<MatchDto[]>> GetMatches([FromQuery] string [] puuid)
+    [HttpGet()]
+    public async Task<ActionResult<MatchDto[]>> GetMatches([FromQuery] string [] puuid, [FromQuery] long? lastTimestamp)
     {
-        var matches = await _riotClient.GetMatches(puuid);
+        var matches = await _riotClient.GetMatches(puuid, lastTimestamp: lastTimestamp);
         return Ok(matches);
     }
 
-    [HttpGet("GetMatchParticipants")]
-    public async Task<ActionResult<MatchParticipantDto[]>> GetMatchParticipants([FromQuery] string matchId)
+    [HttpGet("{matchId}/participants")]
+    public async Task<ActionResult<MatchParticipantDto[]>> GetMatchParticipants(string matchId)
     {
         var participants = await _riotClient.GetMatchParticipants(matchId);
         if (participants.Length == 0) return NotFound();

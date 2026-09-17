@@ -180,6 +180,11 @@ public class RiotClient
          }
       }
 
+      if (resp.StatusCode == HttpStatusCode.Unauthorized)
+      {
+         Logger.LogError("Request was not authorised! Is the API key valid?");
+      }
+
       return resp;
    }
 
@@ -487,10 +492,14 @@ public class RiotClient
       return ids;
    }
 
-   public async Task<MatchModel[]> GetMatches(IEnumerable<string> puuids, int count = 10)
+   public async Task<MatchModel[]> GetMatches(IEnumerable<string> puuids, int count = 10, long? lastTimestamp = null)
    {
       await using var db = await _scopeFactory.CreateDbContextAsync();
       var matchModels = db.MatchParticipants.Where(x => puuids.Contains(x.Summoner.Puuid)).Select(x => x.Match);
+      if (lastTimestamp != null)
+      {
+         matchModels = matchModels.Where(x => x.GameEndTimestamp < lastTimestamp);
+      }
       return await matchModels.OrderByDescending(x => x.GameCreation).Take(count).ToArrayAsync();
    }
 

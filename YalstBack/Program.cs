@@ -22,13 +22,13 @@ public class Program
             options.AddPolicy(name: kitten,
                 policy =>
                 {
-                    policy.WithOrigins("https://yalst.kitten.rs");
+                    policy.WithOrigins("https://yalst.kitten.rs").WithMethods(["GET", "PATCH"]);
                 });
             #if DEBUG
             options.AddPolicy(name: debugOrigin,
                 policy =>
                 {
-                    policy.WithOrigins("http://localhost:4200");
+                    policy.WithOrigins("http://localhost:4200").WithMethods(["GET", "PATCH"]);
                 });
             #endif
         });
@@ -53,11 +53,7 @@ public class Program
 
         var app = builder.Build();
 
-        app.UseCors(kitten);
-        
-        #if DEBUG
-        app.UseCors(debugOrigin);
-        #endif
+
         
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -67,6 +63,13 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        
+        app.UseCors(kitten);
+        
+#if DEBUG
+        app.UseCors(debugOrigin);
+#endif
+        
         app.UseAuthorization();
 
         app.MapControllers();
