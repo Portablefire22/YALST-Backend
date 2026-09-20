@@ -114,6 +114,9 @@ public class RiotClient
             }
             queueSummoner.SummonerModel = summonerModel;
             break;
+         case QueueAddRank queueAddRank:
+            await UpdateSummonerRank(queueAddRank.Summoner);
+            break;
          case QueueMatchParticipant queueMatchParticipant:
             await AddMatchParticipant(queueMatchParticipant);
             break;
@@ -226,7 +229,9 @@ public class RiotClient
 
    public bool InQueue(string puuid)
    {
-      return QueuedActions.FirstOrDefault(x => x is QueueUpdateSummoner up && up.Puuid == puuid || x is QueueMatchParticipant ma && ma.Puuid == puuid) != null;
+      return QueuedActions.FirstOrDefault(x => x is QueueUpdateSummoner up && up.Puuid == puuid 
+                                               || x is QueueMatchParticipant ma && ma.Puuid == puuid
+                                               || x is QueueAddRank ar && ar.Summoner.Puuid == puuid) != null;
    }
    
    public bool InQueue(string gameName, string tagLine)
@@ -359,6 +364,7 @@ public class RiotClient
          await db.Summoners.AddAsync(apiSummoner);
       }
       await db.SaveChangesAsync();
+      QueueAction(new QueueAddRank(apiSummoner));
       return apiSummoner;
    }
   
@@ -673,6 +679,24 @@ public class RiotClient
       await db.Matches.AddAsync(match);
       await db.SaveChangesAsync();
       return match;
+   }
+   
+   public async Task<Dictionary<string, RankDto[]>> GetRankedHistory(SummonerModel summonerModel, int count = 10)
+   {
+      await using var db = await _scopeFactory.CreateDbContextAsync();
+      var history = db.SummonerRanks.Include(x => x.Summoner)
+         .Where(x => x.Summoner == summonerModel);
+
+      var soloHistory = history.Where(x => x.QueueType == QueueType.RankedSolo)
+         .OrderByDescending(x => x.Time).Take(count);
+      var flexHistory = history.Where(x => x.QueueType == QueueType.RankedFlex)
+         .OrderByDescending(x => x.Time).Take(count);
+
+      return new Dictionary<string, RankDto[]>()
+      {
+         { QueueType.RankedSolo, await soloHistory.Select(x => x.ToDto()).ToArrayAsync() },
+         { QueueType.RankedFlex, await flexHistory.Select(x => x.ToDto()).ToArrayAsync() },
+      };
    }
    
    private async void OnRateLimit(object? sender, RateLimitArgs args)

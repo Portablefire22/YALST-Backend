@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using YalstBack.Data.Dtos;
 
 namespace YalstBack.Data.LeagueModels;
 
@@ -43,6 +44,35 @@ public class RankedModel
             _ => 0
         };
     }
+
+    public RankDto ToDto()
+    {
+        string tier = Tier switch
+        {
+            Tier.Iron => "Iron",
+            Tier.Bronze => "Bronze",
+            Tier.Silver => "Silver",
+            Tier.Gold => "Gold",
+            Tier.Platinum => "Platinum",
+            Tier.Emerald => "Emerald",
+            Tier.Diamond => "Diamond",
+            Tier.Master => "Master",
+            Tier.Grandmaster => "Grandmaster",
+            Tier.Challenger => "Challenger",
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        return new RankDto()
+        {
+            Rank = RankToInt(Rank),
+            LeaguePoints = LeaguePoints,
+            Wins = Wins,
+            Losses = Losses,
+            Tier = tier,
+            QueueType = QueueType,
+            Time = Time
+        };
+    }
 }
 
 public class QueueType
@@ -53,7 +83,7 @@ public class QueueType
     public static readonly string[] Queues = new[] { RankedSolo, RankedFlex };
 }
 
-public enum Rank
+public enum Rank : int
 {
     I = 1,
     II,

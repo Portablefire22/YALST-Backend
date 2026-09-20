@@ -41,6 +41,14 @@ public class SummonerController : Controller
         return Ok(summoner.ToDto());
     }
 
+    [HttpGet("{puuid}/rank")]
+    public async Task<ActionResult<Dictionary<string, RankedModel[]>>> GetSummonerRankedHistory(string puuid)
+    {
+        var summoner = await _riotClient.SummonerModelByPuuid(puuid);
+        if (summoner == null) return NotFound();
+        var history = await _riotClient.GetRankedHistory(summoner);
+        return Ok(history);
+    }
 
     [HttpPatch("{puuid}")]
     public IActionResult UpdateSummoner(string puuid)
