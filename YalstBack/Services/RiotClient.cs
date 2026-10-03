@@ -406,7 +406,7 @@ public class RiotClient
          //queue?.TryGetValue(game.ChampionName, out overview);
          overview ??= await db.ChampionOverviews
             .FirstOrDefaultAsync(x => x.ChampionName == game.ChampionName
-                                      && x.LastUpdated >= CurrentSeasonTimestamp);
+                                      && x.LastUpdated >= CurrentSeasonTimestamp && x.QueueId == game.Match.QueueId);
 
          var matchDurationMs = game.Match.GameEndTimestamp - game.Match.GameStartTimestamp;
 
