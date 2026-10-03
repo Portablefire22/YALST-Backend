@@ -426,7 +426,7 @@ public class RiotClient
             overview.Assists += game.Assists;
             overview.Deaths += game.Deaths;
             overview.Kills += game.Kills;
-            overview.LastUpdated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            overview.LastUpdated = game.Match.GameStartTimestamp;
             overview.CreepsScore += game.TotalMinionsKilled + game.NeutralMinionsKilled;
             if (game.Win)
             {
@@ -445,7 +445,7 @@ public class RiotClient
                Summoner = game.Summoner,
                ChampionName = game.ChampionName,
                ChampionId = game.ChampionId,
-               LastUpdated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+               LastUpdated = game.Match.GameStartTimestamp,
                Assists = game.Assists,
                Deaths = game.Deaths,
                Kills =  game.Kills,
