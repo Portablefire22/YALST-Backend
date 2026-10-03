@@ -210,6 +210,7 @@ public class RiotClient
          db.Summoners.Attach(summoner);
          await db.SaveChangesAsync();
       }
+      await UpdateChampionOverviews(summoner.Puuid);
    }
    
    private async Task UpdateMatchHistory(QueueUpdateMatchHistory queueUpdateMatchHistory)
