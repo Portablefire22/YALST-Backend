@@ -411,6 +411,12 @@ public class RiotClient
 
          if (overview != null)
          {
+            // Prevent adding games that already have been counted
+            if (game.Match.GameStartTimestamp <= overview.LastUpdated)
+            {
+               continue;
+            }
+            
             if (db.Entry(overview).State == EntityState.Detached)
             {
                db.Update(overview);
@@ -437,6 +443,7 @@ public class RiotClient
             {
                Summoner = game.Summoner,
                ChampionName = game.ChampionName,
+               ChampionId = game.ChampionId,
                LastUpdated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                Assists = game.Assists,
                Deaths = game.Deaths,

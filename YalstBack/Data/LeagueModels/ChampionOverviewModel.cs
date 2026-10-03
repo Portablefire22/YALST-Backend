@@ -18,6 +18,7 @@ public class ChampionOverviewModel
     public int QueueId { get; set; }
     public required SummonerModel Summoner { get; set; }
     public required string ChampionName { get; set; }
+    public int ChampionId { get; set; }
     public int Kills { get; set; }
     public int Deaths { get; set; }
     public int Assists { get; set; }
@@ -37,7 +38,8 @@ public class ChampionOverviewModel
             Wins = Wins,
             Losses = Losses,
             ChampionName =  ChampionName,
-            TimePlayed =  TimePlayed
+            TimePlayed =  TimePlayed,
+            ChampionId = ChampionId
         };
     }
 }
