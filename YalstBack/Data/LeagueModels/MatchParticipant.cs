@@ -51,6 +51,9 @@ public class MatchParticipant
     public int PlayerAugment4 { get; set; }
     public int PlayerSubteamId { get; set; }
     
+    public int TotalMinionsKilled { get; set; }
+    public int NeutralMinionsKilled { get; set; }
+    
     public int Summoner1Id { get; set; }
     public int Summoner2Id { get; set; }
     public int TotalDamageTaken { get; set; }
@@ -84,6 +87,7 @@ public class MatchParticipant
             Item5 = participant.Item5,
             Item6 = participant.Item6,
             Kills = participant.Kills,
+            
             LargestMultiKill = participant.LargestMultiKill,
             Assists =  participant.Assists,
             ChampionLevel = participant.ChampionLevel,
@@ -105,6 +109,9 @@ public class MatchParticipant
             SubteamPlacement =   participant.SubteamPlacement,
             TeamId =  participant.TeamId,
             TrueDamageDealtToChampions =  participant.TrueDamageDealtToChampions,
+            
+            NeutralMinionsKilled = participant.NeutralMinionsKilled,
+            TotalMinionsKilled =  participant.TotalMinionsKilled,
         };
     }
 

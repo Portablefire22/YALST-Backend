@@ -9,7 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<SummonerModel> Summoners { get; set; } = default!;
     public virtual DbSet<RankedModel> SummonerRanks { get; set; } = default!;
 
-    public virtual DbSet<ProfileAssociationModel> SummonerAssociations { get; set; } = default!;
+    public virtual DbSet<ChampionOverviewModel> ChampionOverviews { get; set; } = default!;
     
     public virtual DbSet<MatchModel> Matches { get; set; } = default!;
     public virtual DbSet<MatchParticipant> MatchParticipants { get; set; } = default!;
@@ -24,6 +24,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<MatchModel>().Property(e => e.Id).ValueGeneratedOnAdd();
         builder.Entity<MatchParticipant>().Property(e => e.Id).ValueGeneratedOnAdd();
         builder.Entity<RankedModel>().Property(e => e.Id).ValueGeneratedOnAdd();
-        builder.Entity<ProfileAssociationModel>().Property(e => e.Id).ValueGeneratedOnAdd();
+        builder.Entity<ChampionOverviewModel>().Property(e => e.Id).ValueGeneratedOnAdd();
     }
 }

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using YalstBack.Data;
 using YalstBack.Data.Dtos;
 using YalstBack.Data.LeagueModels;
@@ -29,6 +30,10 @@ public class RiotClient
    private JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
    
    private ConcurrentQueue<IQueuedAction> QueuedActions { get; } = [];
+  
+   // Technically this should be by region, but fuck timezones
+   // July 29th 05:00 UTC 
+   private const long CurrentSeasonTimestamp = 1785301200000;
    
    private Task QueueProcessing { get; set; }
 
@@ -197,6 +202,8 @@ public class RiotClient
             TrueDamageDealtToChampions = participant.TrueDamageDealtToChampions,
             VisionScore = participant.VisionScore,
             Win = participant.Win,
+            NeutralMinionsKilled = participant.NeutralMinionsKilled,
+            TotalMinionsKilled =  participant.TotalMinionsKilled,
          };
          await db.MatchParticipants.AddAsync(model);
          db.Matches.Attach(queueMatchParticipant.MatchModel);
@@ -320,52 +327,133 @@ public class RiotClient
    /// <returns>SummonerModel if found, null if not</returns>
    public async Task<SummonerModel?> SummonerModelByPuuid(string puuid, string? platformRouting = null, bool tryDb = true)
    {
-      await using var db = await _scopeFactory.CreateDbContextAsync();
-      // PUUIDs are globally unique, so we don't check for region
-      var dbSummoner = await db.Summoners.SingleOrDefaultAsync(x => x.Puuid == puuid);
-      if (tryDb && dbSummoner != null)
+      SummonerModel? apiSummoner;
+      await using (var db = await _scopeFactory.CreateDbContextAsync())
       {
-         if (string.IsNullOrEmpty(dbSummoner.InternalName) || string.IsNullOrEmpty(dbSummoner.InternalTag))
+         // PUUIDs are globally unique, so we don't check for region
+         var dbSummoner = await db.Summoners.SingleOrDefaultAsync(x => x.Puuid == puuid);
+         if (tryDb && dbSummoner != null)
          {
-            db.Update(dbSummoner);
-            dbSummoner.InternalName = dbSummoner.GameName.ToLowerInvariant();
-            dbSummoner.InternalTag = dbSummoner.TagLine.ToLowerInvariant();
-            await db.SaveChangesAsync();
+            if (string.IsNullOrEmpty(dbSummoner.InternalName) || string.IsNullOrEmpty(dbSummoner.InternalTag))
+            {
+               db.Update(dbSummoner);
+               dbSummoner.InternalName = dbSummoner.GameName.ToLowerInvariant();
+               dbSummoner.InternalTag = dbSummoner.TagLine.ToLowerInvariant();
+               await db.SaveChangesAsync();
+            }
+
+            return dbSummoner;
          }
-         return dbSummoner;
+
+         platformRouting ??= dbSummoner?.Region;
+         if (platformRouting == null) return null;
+
+         var accountDto = await AccountDtoByPuuid(puuid);
+         if (accountDto == null) return null;
+         var summonerDto = await SummonerDtoByPuuid(puuid, platformRouting);
+         if (summonerDto == null) return null;
+         apiSummoner = new SummonerModel()
+         {
+            GameName = accountDto.GameName,
+            TagLine = accountDto.TagLine,
+            InternalName = accountDto.GameName.ToLowerInvariant(),
+            InternalTag = accountDto.TagLine.ToLowerInvariant(),
+            Puuid = accountDto.Puuid,
+            Region = platformRouting.ToLowerInvariant(),
+            RevisionDate = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            SummonerLevel = summonerDto.SummonerLevel,
+            ProfileIconId = summonerDto.ProfileIconId,
+         };
+         if (dbSummoner != null)
+         {
+            apiSummoner.Id = dbSummoner.Id;
+            db.Entry(dbSummoner).CurrentValues.SetValues(apiSummoner);
+         }
+         else
+         {
+            await db.Summoners.AddAsync(apiSummoner);
+         }
+
+         await db.SaveChangesAsync();
+
       }
 
-      platformRouting ??= dbSummoner?.Region;
-      if (platformRouting == null) return null;
-      
-      var accountDto = await  AccountDtoByPuuid(puuid);
-      if (accountDto == null) return null;
-      var summonerDto = await SummonerDtoByPuuid(puuid, platformRouting);
-      if (summonerDto == null) return null;
-      var apiSummoner = new SummonerModel()
-      {
-         GameName = accountDto.GameName,
-         TagLine = accountDto.TagLine,
-         InternalName = accountDto.GameName.ToLowerInvariant(),
-         InternalTag = accountDto.TagLine.ToLowerInvariant(),
-         Puuid = accountDto.Puuid,
-         Region = platformRouting.ToLowerInvariant(),
-         RevisionDate = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-         SummonerLevel = summonerDto.SummonerLevel,
-         ProfileIconId = summonerDto.ProfileIconId,
-      };
-      if (dbSummoner != null)
-      {
-         apiSummoner.Id = dbSummoner.Id;
-         db.Entry(dbSummoner).CurrentValues.SetValues(apiSummoner);
-      }
-      else
-      {
-         await db.Summoners.AddAsync(apiSummoner);
-      }
-      await db.SaveChangesAsync();
+      await UpdateChampionOverviews(apiSummoner.Puuid);
       QueueAction(new QueueAddRank(apiSummoner));
       return apiSummoner;
+   }
+
+   /// <summary>
+   /// Updates champion overviews for a given summoner
+   /// </summary>
+   /// <param name="apiSummoner"></param>
+   private async Task UpdateChampionOverviews(string puuid)
+   {
+      await using var db = await _scopeFactory.CreateDbContextAsync();
+
+      var games = await db.MatchParticipants.Include(x => x.Match)
+         .Include(x => x.Summoner)
+         .Where(x => x.Summoner.Puuid == puuid && x.Match.GameStartTimestamp >= CurrentSeasonTimestamp)
+         .OrderBy(x => x.Match.GameStartTimestamp).ToArrayAsync();
+
+      Dictionary<int, Dictionary<string, ChampionOverviewModel>> overviews = [];
+      
+      foreach (var game in games)
+      {
+         //overviews.TryGetValue(game.Match.QueueId, out var queue);
+         ChampionOverviewModel? overview = null;
+         //queue?.TryGetValue(game.ChampionName, out overview);
+         overview ??= await db.ChampionOverviews
+            .FirstOrDefaultAsync(x => x.ChampionName == game.ChampionName
+                                      && x.LastUpdated >= CurrentSeasonTimestamp);
+
+         var matchDurationMs = game.Match.GameEndTimestamp - game.Match.GameStartTimestamp;
+
+         if (overview != null)
+         {
+            if (db.Entry(overview).State == EntityState.Detached)
+            {
+               db.Update(overview);
+            }
+            
+            overview.Assists += game.Assists;
+            overview.Deaths += game.Deaths;
+            overview.Kills += game.Kills;
+            overview.LastUpdated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            overview.CreepsScore += game.TotalMinionsKilled + game.NeutralMinionsKilled;
+            if (game.Win)
+            {
+               overview.Wins++;
+            }
+            else
+            {
+               overview.Losses++;
+            }
+            overview.TimePlayed += matchDurationMs;
+         }
+         else
+         {
+            overview ??= new ChampionOverviewModel()
+            {
+               Summoner = game.Summoner,
+               ChampionName = game.ChampionName,
+               LastUpdated = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+               Assists = game.Assists,
+               Deaths = game.Deaths,
+               Kills =  game.Kills,
+               QueueId = game.Match.QueueId,
+               TimePlayed = matchDurationMs,
+               CreepsScore = game.TotalMinionsKilled + game.NeutralMinionsKilled,
+               Losses = game.Win ? 0 : 1,
+               Wins = game.Win ? 1 : 0,
+            };
+
+            await db.ChampionOverviews.AddAsync(overview);
+         }
+         await db.SaveChangesAsync();
+         //overviews[game.Match.QueueId][game.ChampionName] = overview;
+      }
+      await db.SaveChangesAsync();
    }
   
    /// <summary>
@@ -698,6 +786,31 @@ public class RiotClient
          { QueueType.RankedFlex, await flexHistory.Select(x => x.ToDto()).ToArrayAsync() },
       };
    }
+
+   public async Task<Dictionary<int, List<ChampionOverviewModel>>> GetChampionOverviews(string[] puuids)
+   {
+      await using var db = await _scopeFactory.CreateDbContextAsync();
+
+      var overviews = await db.ChampionOverviews.Include(x => x.Summoner)
+         .Where(x =>
+            ((IEnumerable<string>)puuids).Contains(x.Summoner.Puuid)
+            && x.LastUpdated >= CurrentSeasonTimestamp).OrderByDescending(x => x.Wins + x.Losses).ToArrayAsync();
+
+      Dictionary<int, List<ChampionOverviewModel>> byGamemodes = [];
+      
+      foreach (var overview in overviews)
+      {
+         byGamemodes.TryGetValue(overview.QueueId, out var list);
+         if (list == null)
+         {
+            list = [];
+            byGamemodes[overview.QueueId] = list;
+         }
+         list.Add(overview);
+      }
+      return byGamemodes;
+   }
+   
    
    private async void OnRateLimit(object? sender, RateLimitArgs args)
    {

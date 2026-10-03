@@ -2,17 +2,20 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YalstBack.Data;
 
 #nullable disable
 
-namespace YetAnotherLeagueStatTracker.Data.Migrations
+namespace YalstBack.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003183239_RenamedChampionOverviewTimestamp")]
+    partial class RenamedChampionOverviewTimestamp
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,9 +52,6 @@ namespace YetAnotherLeagueStatTracker.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<int>("Losses")
-                        .HasColumnType("int");
-
-                    b.Property<int>("QueueId")
                         .HasColumnType("int");
 
                     b.Property<int>("SummonerId")
@@ -223,9 +223,6 @@ namespace YetAnotherLeagueStatTracker.Data.Migrations
                     b.Property<int>("MatchId")
                         .HasColumnType("int");
 
-                    b.Property<int>("NeutralMinionsKilled")
-                        .HasColumnType("int");
-
                     b.Property<int>("PhysicalDamageDealtToChampions")
                         .HasColumnType("int");
 
@@ -270,9 +267,6 @@ namespace YetAnotherLeagueStatTracker.Data.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<int>("TotalDamageTaken")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TotalMinionsKilled")
                         .HasColumnType("int");
 
                     b.Property<int>("TrueDamageDealtToChampions")

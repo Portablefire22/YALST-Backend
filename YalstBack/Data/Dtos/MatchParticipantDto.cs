@@ -27,6 +27,9 @@ public class MatchParticipantDto
     public int Item5 { get; set; }
     public int Item6 { get; set; }
     
+    public int TotalMinionsKilled { get; set; }
+    public int NeutralMinionsKilled { get; set; }
+    
     public int Kills { get; set; }
     public int LargestMultiKill { get; set; }
     public int MagicDamageDealtToChampions { get; set; }
