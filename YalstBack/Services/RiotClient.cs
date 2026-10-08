@@ -119,6 +119,9 @@ public class RiotClient
             }
             queueSummoner.SummonerModel = summonerModel;
             break;
+         case QueueUpdateChampionOverview overview:
+            await UpdateChampionOverviews(overview.Puuid);
+            break;
          case QueueAddRank queueAddRank:
             await UpdateSummonerRank(queueAddRank.Summoner);
             break;
@@ -239,7 +242,8 @@ public class RiotClient
    {
       return QueuedActions.FirstOrDefault(x => x is QueueUpdateSummoner up && up.Puuid == puuid 
                                                || x is QueueMatchParticipant ma && ma.Puuid == puuid
-                                               || x is QueueAddRank ar && ar.Summoner.Puuid == puuid) != null;
+                                               || x is QueueAddRank ar && ar.Summoner.Puuid == puuid
+                                               || x is QueueUpdateChampionOverview over && over.Puuid == puuid) != null;
    }
    
    public bool InQueue(string gameName, string tagLine)
@@ -378,8 +382,7 @@ public class RiotClient
          await db.SaveChangesAsync();
 
       }
-
-      await UpdateChampionOverviews(apiSummoner.Puuid);
+      QueueAction(new QueueUpdateChampionOverview(apiSummoner.Puuid));
       QueueAction(new QueueAddRank(apiSummoner));
       return apiSummoner;
    }
