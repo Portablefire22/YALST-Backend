@@ -59,6 +59,10 @@ public class RankedModel
             Tier.Master => "Master",
             Tier.Grandmaster => "Grandmaster",
             Tier.Challenger => "Challenger",
+            
+            Tier.Salt => "Salt",
+            Tier.Wood => "Wood",
+            Tier.Legend => "Legend",
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -102,5 +106,9 @@ public enum Tier
     Diamond,
     Master,
     Grandmaster,
-    Challenger
+    Challenger,
+    
+    Salt,
+    Wood,
+    Legend
 }

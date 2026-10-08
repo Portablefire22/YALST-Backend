@@ -78,7 +78,6 @@ public class RiotClient
             if (IsLimited) continue;
             if (!QueuedActions.TryDequeue(out var result))
             {
-               
                continue;
             }
             Logger.LogInformation($"Processing: {result}");
@@ -102,6 +101,7 @@ public class RiotClient
 
    private async Task ProcessAction(IQueuedAction action)
    {
+      string? puuid = null;
       switch (action)
       {
          case QueueSummoner queueSummoner:
@@ -110,12 +110,14 @@ public class RiotClient
             if (queueSummoner.Puuid != null)
             {
                summonerModel = await SummonerModelByPuuid(queueSummoner.Puuid, null, tryDb);
+               puuid = summonerModel?.Puuid;
             }
             else
             {
                if (queueSummoner is { TagLine: not null, GameName: not null, Region: not null})
                   summonerModel = await SummonerModelByRiotId(queueSummoner.GameName, queueSummoner.TagLine,
                      queueSummoner.Region);
+               puuid = summonerModel?.Puuid;
             }
             queueSummoner.SummonerModel = summonerModel;
             break;
@@ -124,9 +126,11 @@ public class RiotClient
             break;
          case QueueAddRank queueAddRank:
             await UpdateSummonerRank(queueAddRank.Summoner);
+            puuid = queueAddRank.Summoner.Puuid;
             break;
          case QueueMatchParticipant queueMatchParticipant:
             await AddMatchParticipant(queueMatchParticipant);
+            puuid = queueMatchParticipant.Puuid;
             break;
          case QueueUpdateMatchHistory queueUpdateMatchHistory:
             await UpdateMatchHistory(queueUpdateMatchHistory);
@@ -134,6 +138,11 @@ public class RiotClient
          case QueueMatch queueMatch:
             _ = await GetMatchById(queueMatch.MatchId, regionalRouting: queueMatch.RegionalRouting);
             break;
+      }
+
+      if (puuid != null && !InQueue(puuid))
+      {
+         QueueAction(new QueueUpdateChampionOverview(puuid));
       }
       action.InvokeCallback();
    }
@@ -213,7 +222,6 @@ public class RiotClient
          db.Summoners.Attach(summoner);
          await db.SaveChangesAsync();
       }
-      await UpdateChampionOverviews(summoner.Puuid);
    }
    
    private async Task UpdateMatchHistory(QueueUpdateMatchHistory queueUpdateMatchHistory)
@@ -382,7 +390,6 @@ public class RiotClient
          await db.SaveChangesAsync();
 
       }
-      QueueAction(new QueueUpdateChampionOverview(apiSummoner.Puuid));
       QueueAction(new QueueAddRank(apiSummoner));
       return apiSummoner;
    }

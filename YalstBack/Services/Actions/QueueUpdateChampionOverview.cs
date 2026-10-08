@@ -14,6 +14,6 @@ public class QueueUpdateChampionOverview : IQueuedAction
     
     public void InvokeCallback()
     {
-        throw new NotImplementedException();
+        Parent?.InvokeCallback();
     }
 }
