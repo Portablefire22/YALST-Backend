@@ -102,42 +102,50 @@ public class RiotClient
    private async Task ProcessAction(IQueuedAction action)
    {
       string? puuid = null;
-      switch (action)
+      try
       {
-         case QueueSummoner queueSummoner:
-            var tryDb = queueSummoner is not QueueUpdateSummoner;
-            SummonerModel? summonerModel = null;
-            if (queueSummoner.Puuid != null)
-            {
-               summonerModel = await SummonerModelByPuuid(queueSummoner.Puuid, null, tryDb);
-               puuid = summonerModel?.Puuid;
-            }
-            else
-            {
-               if (queueSummoner is { TagLine: not null, GameName: not null, Region: not null})
-                  summonerModel = await SummonerModelByRiotId(queueSummoner.GameName, queueSummoner.TagLine,
-                     queueSummoner.Region);
-               puuid = summonerModel?.Puuid;
-            }
-            queueSummoner.SummonerModel = summonerModel;
-            break;
-         case QueueUpdateChampionOverview overview:
-            await UpdateChampionOverviews(overview.Puuid);
-            break;
-         case QueueAddRank queueAddRank:
-            await UpdateSummonerRank(queueAddRank.Summoner);
-            puuid = queueAddRank.Summoner.Puuid;
-            break;
-         case QueueMatchParticipant queueMatchParticipant:
-            await AddMatchParticipant(queueMatchParticipant);
-            puuid = queueMatchParticipant.Puuid;
-            break;
-         case QueueUpdateMatchHistory queueUpdateMatchHistory:
-            await UpdateMatchHistory(queueUpdateMatchHistory);
-            break;
-         case QueueMatch queueMatch:
-            _ = await GetMatchById(queueMatch.MatchId, regionalRouting: queueMatch.RegionalRouting);
-            break;
+         switch (action)
+         {
+            case QueueSummoner queueSummoner:
+               var tryDb = queueSummoner is not QueueUpdateSummoner;
+               SummonerModel? summonerModel = null;
+               if (queueSummoner.Puuid != null)
+               {
+                  puuid = queueSummoner.Puuid;
+                  summonerModel = await SummonerModelByPuuid(queueSummoner.Puuid, null, tryDb);
+               }
+               else
+               {
+                  if (queueSummoner is { TagLine: not null, GameName: not null, Region: not null })
+                     summonerModel = await SummonerModelByRiotId(queueSummoner.GameName, queueSummoner.TagLine,
+                        queueSummoner.Region);
+                  puuid = summonerModel?.Puuid;
+               }
+
+               queueSummoner.SummonerModel = summonerModel;
+               break;
+            case QueueUpdateChampionOverview overview:
+               await UpdateChampionOverviews(overview.Puuid);
+               break;
+            case QueueAddRank queueAddRank:
+               await UpdateSummonerRank(queueAddRank.Summoner);
+               puuid = queueAddRank.Summoner.Puuid;
+               break;
+            case QueueMatchParticipant queueMatchParticipant:
+               await AddMatchParticipant(queueMatchParticipant);
+               puuid = queueMatchParticipant.Puuid;
+               break;
+            case QueueUpdateMatchHistory queueUpdateMatchHistory:
+               //await UpdateMatchHistory(queueUpdateMatchHistory);
+               break;
+            case QueueMatch queueMatch:
+               _ = await GetMatchById(queueMatch.MatchId, regionalRouting: queueMatch.RegionalRouting);
+               break;
+         }
+      }
+      catch (Exception e)
+      {
+         Logger.LogError($"{e}");
       }
 
       if (puuid != null && !InQueue(puuid))
@@ -229,7 +237,12 @@ public class RiotClient
       var summoner = await SummonerModelByPuuid(queueUpdateMatchHistory.Puuid);
       if (summoner == null) return;
 
-      var matchIds = await MatchIdsByPuuid(summoner.Puuid, platformRouting: summoner.Region, count: 100);
+      var count = 100;
+      
+      #if DEBUG
+      count = 50;
+      #endif
+      var matchIds = await MatchIdsByPuuid(summoner.Puuid, platformRouting: summoner.Region, count: count);
       await using (var db = await _scopeFactory.CreateDbContextAsync())
       {
          var existingIds = db.MatchParticipants.Where(x => x.Summoner == summoner)
@@ -264,7 +277,7 @@ public class RiotClient
       if (action is QueueUpdateSummoner { Puuid: not null } queueUpdateSummoner)
       {
          QueueAction(new QueueUpdateMatchHistory(queueUpdateSummoner.Puuid,queueUpdateSummoner));
-         return;
+         //return;
       }
       QueuedActions.Enqueue(action);
    }
@@ -416,6 +429,7 @@ public class RiotClient
          //queue?.TryGetValue(game.ChampionName, out overview);
          overview ??= await db.ChampionOverviews
             .FirstOrDefaultAsync(x => x.ChampionName == game.ChampionName
+                                      && x.Summoner == game.Summoner
                                       && x.LastUpdated >= CurrentSeasonTimestamp && x.QueueId == game.Match.QueueId);
 
          var matchDurationMs = game.Match.GameEndTimestamp - game.Match.GameStartTimestamp;
