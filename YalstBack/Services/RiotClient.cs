@@ -136,7 +136,7 @@ public class RiotClient
                puuid = queueMatchParticipant.Puuid;
                break;
             case QueueUpdateMatchHistory queueUpdateMatchHistory:
-               //await UpdateMatchHistory(queueUpdateMatchHistory);
+               await UpdateMatchHistory(queueUpdateMatchHistory);
                break;
             case QueueMatch queueMatch:
                _ = await GetMatchById(queueMatch.MatchId, regionalRouting: queueMatch.RegionalRouting);
@@ -277,7 +277,7 @@ public class RiotClient
       if (action is QueueUpdateSummoner { Puuid: not null } queueUpdateSummoner)
       {
          QueueAction(new QueueUpdateMatchHistory(queueUpdateSummoner.Puuid,queueUpdateSummoner));
-         //return;
+         return;
       }
       QueuedActions.Enqueue(action);
    }
